@@ -50,15 +50,14 @@ def prepare_arrays_match():
     f = open("t1.csv", "r")
     f.readline()
 
-    best_hotels_od_ulc = dict()
-    best_hotels_uid_miss = dict()
-    best_hotels_search_dest = dict()
-    best_hotels_country = dict()
+    rule_names = [
+        'best_hotels_od_ulc', 'best_hotels_uid_miss',
+        'best_hotels_search_dest', 'best_hotels_country',
+        'popular_hotel_cluster', 'best_s00', 'best_s01', 'best_hotels_dates',
+        'best_hotels_season'
+    ]
+    rule_collections = {rule_name: dict() for rule_name in rule_names}
     popular_hotel_cluster = dict()
-    best_s00 = dict()
-    best_s01 = dict()
-    best_hotels_dates = dict()
-    best_hotels_season = dict()
     total = 0
 
     # Calc counts
@@ -139,11 +138,13 @@ def prepare_arrays_match():
         if not_blank(srch_destination_id, hotel_country) and is_booking:
             w = (weekday_booking, stay_duration,
                  srch_destination_id, hotel_country, hotel_market)
+            best_hotels_dates = rule_collections['best_hotels_dates']
             append_rule(w, hotel_cluster, append_0, best_hotels_dates)
 
         # month
         if False:  # srch_destination_id != '' and hotel_country != '' and is_booking == 1:
             w = (season_booking, srch_destination_id)
+            best_hotels_season = rule_collections['best_hotels_season']
             append_rule(w, hotel_cluster, append_1, best_hotels_season)
         # End of Miquel
 
@@ -152,11 +153,13 @@ def prepare_arrays_match():
                 is_booking):
             s00 = (user_id, user_location_city,
                    srch_destination_id, hotel_country, hotel_market)
+            best_s00 = rule_collections['best_s00']
             append_rule(s00, hotel_cluster, append_0, best_s00)
 
         if (not_blank(user_location_city, orig_destination_distance, user_id,
                       srch_destination_id) and is_booking):
             s01 = (user_id, srch_destination_id, hotel_country, hotel_market)
+            best_s01 = rule_collections['best_s01']
             append_rule(s01, hotel_cluster, append_0, best_s01)
 
         if (not_blank(user_location_city, user_id,
@@ -164,19 +167,25 @@ def prepare_arrays_match():
                 orig_destination_distance == '' and is_booking):
             s0 = (user_id, user_location_city,
                   srch_destination_id, hotel_country, hotel_market)
+            best_hotels_uid_miss = rule_collections['best_hotels_uid_miss']
             append_rule(s0, hotel_cluster, append_0, best_hotels_uid_miss)
 
         if not_blank(user_location_city, orig_destination_distance):
             s1 = (user_location_city, orig_destination_distance)
+            best_hotels_od_ulc = rule_collections['best_hotels_od_ulc']
             append_rule(s1, hotel_cluster, append_0, best_hotels_od_ulc)
 
         if not_blank(srch_destination_id, hotel_country, hotel_market):
             s2 = (srch_destination_id, hotel_country, hotel_market, is_package)
+            best_hotels_search_dest = \
+                rule_collections['best_hotels_search_dest']
             append_rule(s2, hotel_cluster, append_1, best_hotels_search_dest)
 
         if not_blank(hotel_market):
             s3 = (hotel_market)
+            best_hotels_country = rule_collections['best_hotels_country']
             append_rule(s3, hotel_cluster, append_2, best_hotels_country)
+
 
         if hotel_cluster in popular_hotel_cluster:
             popular_hotel_cluster[hotel_cluster] += append_0
@@ -184,10 +193,10 @@ def prepare_arrays_match():
             popular_hotel_cluster[hotel_cluster] = append_0
 
     f.close()
-    return best_s00, best_s01, best_hotels_country, best_hotels_od_ulc, best_hotels_uid_miss, best_hotels_search_dest, popular_hotel_cluster, best_hotels_dates, best_hotels_season
+    return rule_collections, popular_hotel_cluster
 
 
-def gen_submission(best_s00, best_s01, best_hotels_country, best_hotels_search_dest, best_hotels_od_ulc, best_hotels_uid_miss, popular_hotel_cluster, best_hotels_dates, best_hotels_season):
+def gen_submission(rule_collections, popular_hotel_cluster):
     # now = datetime.datetime.now()
     # path = 'submission_' + str(now.strftime("%Y-%m-%d-%H-%M")) + '.csv'
     path = 'submission_last.csv'
@@ -263,8 +272,8 @@ def gen_submission(best_s00, best_s01, best_hotels_country, best_hotels_search_d
 
         # data leak
         s1 = (user_location_city, orig_destination_distance)
-        if s1 in best_hotels_od_ulc:
-            d = best_hotels_od_ulc[s1]
+        if s1 in rule_collections['best_hotels_od_ulc']:
+            d = rule_collections['best_hotels_od_ulc'][s1]
             topitems = nlargest(5, sorted(d.items()), key=itemgetter(1))
             for i in range(len(topitems)):
                 if topitems[i][0] in filled:
@@ -278,8 +287,8 @@ def gen_submission(best_s00, best_s01, best_hotels_country, best_hotels_search_d
         if orig_destination_distance == '':
             s0 = (user_id, user_location_city,
                   srch_destination_id, hotel_country, hotel_market)
-            if s0 in best_hotels_uid_miss:
-                d = best_hotels_uid_miss[s0]
+            if s0 in rule_collections['best_hotels_uid_miss']:
+                d = rule_collections['best_hotels_uid_miss'][s0]
                 topitems = nlargest(4, sorted(d.items()), key=itemgetter(1))
                 for i in range(len(topitems)):
                     if topitems[i][0] in filled:
@@ -293,9 +302,10 @@ def gen_submission(best_s00, best_s01, best_hotels_country, best_hotels_search_d
         s00 = (user_id, user_location_city,
                srch_destination_id, hotel_country, hotel_market)
         s01 = (user_id, srch_destination_id, hotel_country, hotel_market)
-        if s01 in best_s01 and s00 not in best_s00:
+        if s01 in rule_collections['best_s01'] and \
+                s00 not in rule_collections['best_s00']:
             # print(s01)
-            d = best_s01[s01]
+            d = rule_collections['best_s01'][s01]
             topitems = nlargest(4, sorted(d.items()), key=itemgetter(1))
             for i in range(len(topitems)):
                 if topitems[i][0] in filled:
@@ -307,8 +317,8 @@ def gen_submission(best_s00, best_s01, best_hotels_country, best_hotels_search_d
                 total00 += 1
 
         s2 = (srch_destination_id, hotel_country, hotel_market, is_package)
-        if s2 in best_hotels_search_dest:
-            d = best_hotels_search_dest[s2]
+        if s2 in rule_collections['best_hotels_search_dest']:
+            d = rule_collections['best_hotels_search_dest'][s2]
             topitems = nlargest(5, d.items(), key=itemgetter(1))
             for i in range(len(topitems)):
                 if topitems[i][0] in filled:
@@ -322,8 +332,9 @@ def gen_submission(best_s00, best_s01, best_hotels_country, best_hotels_search_d
         # weekend
         sw = (weekday_booking, stay_duration,
               srch_destination_id, hotel_country, hotel_market)
-        if weekday_booking != -1 and stay_duration != -1 and sw in best_hotels_dates:
-            d = best_hotels_dates[sw]
+        if weekday_booking != -1 and stay_duration != -1 and \
+                sw in rule_collections['best_hotels_dates']:
+            d = rule_collections['best_hotels_dates'][sw]
             topitems = nlargest(5, d.items(), key=itemgetter(1))
             for i in range(len(topitems)):
                 if topitems[i][0] in filled:
@@ -351,8 +362,8 @@ def gen_submission(best_s00, best_s01, best_hotels_country, best_hotels_search_d
                 totalseason += 1
 
         s3 = (hotel_market)
-        if s3 in best_hotels_country:
-            d = best_hotels_country[s3]
+        if s3 in rule_collections['best_hotels_country']:
+            d = rule_collections['best_hotels_country'][s3]
             topitems = nlargest(5, d.items(), key=itemgetter(1))
             for i in range(len(topitems)):
                 if topitems[i][0] in filled:
@@ -384,6 +395,5 @@ def gen_submission(best_s00, best_s01, best_hotels_country, best_hotels_search_d
     print('Total 4: {} ...'.format(total4))
 
 
-best_s00, best_s01, best_hotels_country, best_hotels_od_ulc, best_hotels_uid_miss, best_hotels_search_dest, popular_hotel_cluster, best_hotels_dates, best_hotels_season = prepare_arrays_match()
-gen_submission(best_s00, best_s01, best_hotels_country, best_hotels_search_dest, best_hotels_od_ulc,
-               best_hotels_uid_miss, popular_hotel_cluster, best_hotels_dates, best_hotels_season)
+rule_collections, popular_hotel_cluster = prepare_arrays_match()
+gen_submission(rule_collections, popular_hotel_cluster)
