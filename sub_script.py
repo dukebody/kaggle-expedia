@@ -22,6 +22,10 @@ def parse_date(date_str):
     return datetime(int(year_str), int(month_str), int(day_str))
 
 
+def not_blank(*strings):
+    return all([val != '' for val in strings])
+
+
 def prepare_arrays_match():
     f = open("t1.csv", "r")
     f.readline()
@@ -57,7 +61,8 @@ def prepare_arrays_match():
             book_year = int(arr[0][:4])
             book_month = int(arr[0][5:7])
 
-        if book_month < 1 or book_month > 12 or book_year < 2012 or book_year > 2015:
+        if (book_month < 1 or book_month > 12 or book_year < 2012 or
+                book_year > 2015):
             # print(book_month)
             # print(book_year)
             # print(line)
@@ -97,21 +102,21 @@ def prepare_arrays_match():
         created_dt = parse_date(date_time)
         weekday_created = created_dt.weekday()
 
-        if arr[11] != '':
+        if not_blank(booking_ini):
             booking_ini_dt = parse_date(booking_ini)
             month_booking = booking_ini_dt.month
             season_booking = get_season(month_booking)
             weekday_booking = booking_ini_dt.weekday()
         else:
             weekday_booking = -1
-        if arr[11] != '' and arr[12] != '':
+        if not_blank(booking_ini, booking_end):
             booking_end_dt = parse_date(booking_end)
             stay_duration = (booking_end_dt - booking_ini_dt).days
         else:
             stay_duration = -1
 
         # weekday + duration
-        if srch_destination_id != '' and hotel_country != '' and is_booking == 1:
+        if not_blank(srch_destination_id, hotel_country) and is_booking:
             w = (weekday_booking, stay_duration,
                  srch_destination_id, hotel_country, hotel_market)
             if w in best_hotels_dates:
@@ -136,7 +141,9 @@ def prepare_arrays_match():
                 best_hotels_season[w][hotel_cluster] = append_1
         # End of Miquel
 
-        if user_location_city != '' and orig_destination_distance != '' and user_id != '' and srch_destination_id != '' and hotel_country != '' and is_booking == 1:
+        if (not_blank(user_location_city, orig_destination_distance,
+                      user_id, srch_destination_id, hotel_country) and
+                is_booking):
             s00 = (user_id, user_location_city,
                    srch_destination_id, hotel_country, hotel_market)
             if s00 in best_s00:
@@ -148,7 +155,8 @@ def prepare_arrays_match():
                 best_s00[s00] = dict()
                 best_s00[s00][hotel_cluster] = append_0
 
-        if user_location_city != '' and orig_destination_distance != '' and user_id != '' and srch_destination_id != '' and is_booking == 1:
+        if (not_blank(user_location_city, orig_destination_distance, user_id,
+                      srch_destination_id) and is_booking):
             s01 = (user_id, srch_destination_id, hotel_country, hotel_market)
             # print(s01)
             if s01 in best_s01:
@@ -160,7 +168,9 @@ def prepare_arrays_match():
                 best_s01[s01] = dict()
                 best_s01[s01][hotel_cluster] = append_0
 
-        if user_location_city != '' and orig_destination_distance == '' and user_id != '' and srch_destination_id != '' and hotel_country != '' and is_booking == 1:
+        if (not_blank(user_location_city, user_id,
+                      srch_destination_id, hotel_country) and
+                orig_destination_distance == '' and is_booking):
             s0 = (user_id, user_location_city,
                   srch_destination_id, hotel_country, hotel_market)
             if s0 in best_hotels_uid_miss:
@@ -172,7 +182,7 @@ def prepare_arrays_match():
                 best_hotels_uid_miss[s0] = dict()
                 best_hotels_uid_miss[s0][hotel_cluster] = append_0
 
-        if user_location_city != '' and orig_destination_distance != '':
+        if not_blank(user_location_city, orig_destination_distance):
             s1 = (user_location_city, orig_destination_distance)
 
             if s1 in best_hotels_od_ulc:
@@ -184,7 +194,7 @@ def prepare_arrays_match():
                 best_hotels_od_ulc[s1] = dict()
                 best_hotels_od_ulc[s1][hotel_cluster] = append_0
 
-        if srch_destination_id != '' and hotel_country != '' and hotel_market != '':
+        if not_blank(srch_destination_id, hotel_country, hotel_market):
             s2 = (srch_destination_id, hotel_country, hotel_market, is_package)
             if s2 in best_hotels_search_dest:
                 if hotel_cluster in best_hotels_search_dest[s2]:
@@ -195,7 +205,7 @@ def prepare_arrays_match():
                 best_hotels_search_dest[s2] = dict()
                 best_hotels_search_dest[s2][hotel_cluster] = append_1
 
-        if hotel_market != '':
+        if not_blank(hotel_market):
             s3 = (hotel_market)
             if s3 in best_hotels_country:
                 if hotel_cluster in best_hotels_country[s3]:
