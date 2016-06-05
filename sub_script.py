@@ -23,7 +23,27 @@ def parse_date(date_str):
 
 
 def not_blank(*strings):
+    """
+    Return True if all given inputs are not blank strings.
+    """
     return all([val != '' for val in strings])
+
+
+def append_rule(antecedents, consequent, weight, rule_collection):
+    """
+    Antecedents are usually a tuple of matched attributes and consequent
+    is a hotel cluster.
+    weight is the weight assigned to the generated rule, instead of just 1.
+    rule_collection is the collection to append the generated rule to.
+    """
+    if antecedents in rule_collection:
+        if consequent in rule_collection[antecedents]:
+            rule_collection[antecedents][consequent] += weight
+        else:
+            rule_collection[antecedents][consequent] = weight
+    else:
+        rule_collection[antecedents] = dict()
+        rule_collection[antecedents][consequent] = weight
 
 
 def prepare_arrays_match():
@@ -119,26 +139,12 @@ def prepare_arrays_match():
         if not_blank(srch_destination_id, hotel_country) and is_booking:
             w = (weekday_booking, stay_duration,
                  srch_destination_id, hotel_country, hotel_market)
-            if w in best_hotels_dates:
-                if hotel_cluster in best_hotels_dates[w]:
-                    best_hotels_dates[w][hotel_cluster] += append_0
-                else:
-                    best_hotels_dates[w][hotel_cluster] = append_0
-            else:
-                best_hotels_dates[w] = dict()
-                best_hotels_dates[w][hotel_cluster] = append_0
+            append_rule(w, hotel_cluster, append_0, best_hotels_dates)
 
         # month
         if False:  # srch_destination_id != '' and hotel_country != '' and is_booking == 1:
             w = (season_booking, srch_destination_id)
-            if w in best_hotels_season:
-                if hotel_cluster in best_hotels_season[w]:
-                    best_hotels_season[w][hotel_cluster] += append_1
-                else:
-                    best_hotels_season[w][hotel_cluster] = append_1
-            else:
-                best_hotels_season[w] = dict()
-                best_hotels_season[w][hotel_cluster] = append_1
+            append_rule(w, hotel_cluster, append_1, best_hotels_season)
         # End of Miquel
 
         if (not_blank(user_location_city, orig_destination_distance,
@@ -146,75 +152,31 @@ def prepare_arrays_match():
                 is_booking):
             s00 = (user_id, user_location_city,
                    srch_destination_id, hotel_country, hotel_market)
-            if s00 in best_s00:
-                if hotel_cluster in best_s00[s00]:
-                    best_s00[s00][hotel_cluster] += append_0
-                else:
-                    best_s00[s00][hotel_cluster] = append_0
-            else:
-                best_s00[s00] = dict()
-                best_s00[s00][hotel_cluster] = append_0
+            append_rule(s00, hotel_cluster, append_0, best_s00)
 
         if (not_blank(user_location_city, orig_destination_distance, user_id,
                       srch_destination_id) and is_booking):
             s01 = (user_id, srch_destination_id, hotel_country, hotel_market)
-            # print(s01)
-            if s01 in best_s01:
-                if hotel_cluster in best_s01[s01]:
-                    best_s01[s01][hotel_cluster] += append_0
-                else:
-                    best_s01[s01][hotel_cluster] = append_0
-            else:
-                best_s01[s01] = dict()
-                best_s01[s01][hotel_cluster] = append_0
+            append_rule(s01, hotel_cluster, append_0, best_s01)
 
         if (not_blank(user_location_city, user_id,
                       srch_destination_id, hotel_country) and
                 orig_destination_distance == '' and is_booking):
             s0 = (user_id, user_location_city,
                   srch_destination_id, hotel_country, hotel_market)
-            if s0 in best_hotels_uid_miss:
-                if hotel_cluster in best_hotels_uid_miss[s0]:
-                    best_hotels_uid_miss[s0][hotel_cluster] += append_0
-                else:
-                    best_hotels_uid_miss[s0][hotel_cluster] = append_0
-            else:
-                best_hotels_uid_miss[s0] = dict()
-                best_hotels_uid_miss[s0][hotel_cluster] = append_0
+            append_rule(s0, hotel_cluster, append_0, best_hotels_uid_miss)
 
         if not_blank(user_location_city, orig_destination_distance):
             s1 = (user_location_city, orig_destination_distance)
-
-            if s1 in best_hotels_od_ulc:
-                if hotel_cluster in best_hotels_od_ulc[s1]:
-                    best_hotels_od_ulc[s1][hotel_cluster] += append_0
-                else:
-                    best_hotels_od_ulc[s1][hotel_cluster] = append_0
-            else:
-                best_hotels_od_ulc[s1] = dict()
-                best_hotels_od_ulc[s1][hotel_cluster] = append_0
+            append_rule(s1, hotel_cluster, append_0, best_hotels_od_ulc)
 
         if not_blank(srch_destination_id, hotel_country, hotel_market):
             s2 = (srch_destination_id, hotel_country, hotel_market, is_package)
-            if s2 in best_hotels_search_dest:
-                if hotel_cluster in best_hotels_search_dest[s2]:
-                    best_hotels_search_dest[s2][hotel_cluster] += append_1
-                else:
-                    best_hotels_search_dest[s2][hotel_cluster] = append_1
-            else:
-                best_hotels_search_dest[s2] = dict()
-                best_hotels_search_dest[s2][hotel_cluster] = append_1
+            append_rule(s2, hotel_cluster, append_1, best_hotels_search_dest)
 
         if not_blank(hotel_market):
             s3 = (hotel_market)
-            if s3 in best_hotels_country:
-                if hotel_cluster in best_hotels_country[s3]:
-                    best_hotels_country[s3][hotel_cluster] += append_2
-                else:
-                    best_hotels_country[s3][hotel_cluster] = append_2
-            else:
-                best_hotels_country[s3] = dict()
-                best_hotels_country[s3][hotel_cluster] = append_2
+            append_rule(s3, hotel_cluster, append_2, best_hotels_country)
 
         if hotel_cluster in popular_hotel_cluster:
             popular_hotel_cluster[hotel_cluster] += append_0
