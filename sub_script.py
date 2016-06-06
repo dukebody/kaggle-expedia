@@ -46,6 +46,27 @@ def append_rule(antecedents, consequent, weight, rule_collection):
         rule_collection[antecedents][consequent] = weight
 
 
+def apply_rules(antecedents, consequents, rule_collection, out):
+    """
+    Apply the given rule collection to the antecedents, writing the
+    consequents to out.
+    Return number of added consequents.
+    """
+    new_consequents = 0
+    if antecedents in rule_collection:
+        rule = rule_collection[antecedents]
+        topitems = nlargest(5, sorted(rule.items()), key=itemgetter(1))
+        for i in range(len(topitems)):
+            if topitems[i][0] in consequents:
+                continue
+            if len(consequents) == 5:
+                break
+            out.write(' ' + topitems[i][0])
+            consequents.append(topitems[i][0])
+            new_consequents += 1
+    return new_consequents
+
+
 def prepare_arrays_match():
     f = open("t1.csv", "r")
     f.readline()
@@ -272,107 +293,44 @@ def gen_submission(rule_collections, popular_hotel_cluster):
 
         # data leak
         s1 = (user_location_city, orig_destination_distance)
-        if s1 in rule_collections['best_hotels_od_ulc']:
-            d = rule_collections['best_hotels_od_ulc'][s1]
-            topitems = nlargest(5, sorted(d.items()), key=itemgetter(1))
-            for i in range(len(topitems)):
-                if topitems[i][0] in filled:
-                    continue
-                if len(filled) == 5:
-                    break
-                out.write(' ' + topitems[i][0])
-                filled.append(topitems[i][0])
-                total1 += 1
+        total1 += apply_rules(s1, filled,
+                              rule_collections['best_hotels_od_ulc'], out)
 
         if orig_destination_distance == '':
             s0 = (user_id, user_location_city,
                   srch_destination_id, hotel_country, hotel_market)
-            if s0 in rule_collections['best_hotels_uid_miss']:
-                d = rule_collections['best_hotels_uid_miss'][s0]
-                topitems = nlargest(4, sorted(d.items()), key=itemgetter(1))
-                for i in range(len(topitems)):
-                    if topitems[i][0] in filled:
-                        continue
-                    if len(filled) == 5:
-                        break
-                    out.write(' ' + topitems[i][0])
-                    filled.append(topitems[i][0])
-                    total0 += 1
+            total0 += apply_rules(
+                    s0, filled, rule_collections['best_hotels_uid_miss'], out)
 
         s00 = (user_id, user_location_city,
                srch_destination_id, hotel_country, hotel_market)
         s01 = (user_id, srch_destination_id, hotel_country, hotel_market)
         if s01 in rule_collections['best_s01'] and \
                 s00 not in rule_collections['best_s00']:
-            # print(s01)
-            d = rule_collections['best_s01'][s01]
-            topitems = nlargest(4, sorted(d.items()), key=itemgetter(1))
-            for i in range(len(topitems)):
-                if topitems[i][0] in filled:
-                    continue
-                if len(filled) == 5:
-                    break
-                out.write(' ' + topitems[i][0])
-                filled.append(topitems[i][0])
-                total00 += 1
+            total00 += apply_rules(s01, filled, rule_collections['best_s01'],
+                                   out)
 
         s2 = (srch_destination_id, hotel_country, hotel_market, is_package)
-        if s2 in rule_collections['best_hotels_search_dest']:
-            d = rule_collections['best_hotels_search_dest'][s2]
-            topitems = nlargest(5, d.items(), key=itemgetter(1))
-            for i in range(len(topitems)):
-                if topitems[i][0] in filled:
-                    continue
-                if len(filled) == 5:
-                    break
-                out.write(' ' + topitems[i][0])
-                filled.append(topitems[i][0])
-                total2 += 1
+        total2 += apply_rules(
+                s2, filled, rule_collections['best_hotels_search_dest'], out)
 
         # weekend
         sw = (weekday_booking, stay_duration,
               srch_destination_id, hotel_country, hotel_market)
-        if weekday_booking != -1 and stay_duration != -1 and \
-                sw in rule_collections['best_hotels_dates']:
-            d = rule_collections['best_hotels_dates'][sw]
-            topitems = nlargest(5, d.items(), key=itemgetter(1))
-            for i in range(len(topitems)):
-                if topitems[i][0] in filled:
-                    continue
-                if len(filled) == 5:
-                    break
-                out.write(' ' + topitems[i][0])
-                filled.append(topitems[i][0])
-                totalw += 1
-
-        # End of mycode
+        totalw += apply_rules(
+            sw, filled, rule_collections['best_hotels_dates'], out)
 
         # season
         ss = (season_booking, srch_destination_id)
-        if False:  # srch_destination_id != '' and hotel_country != '' and ss in best_hotels_season:
-            d = best_hotels_season[ss]
-            topitems = nlargest(5, d.items(), key=itemgetter(1))
-            for i in range(len(topitems)):
-                if topitems[i][0] in filled:
-                    continue
-                if len(filled) == 5:
-                    break
-                out.write(' ' + topitems[i][0])
-                filled.append(topitems[i][0])
-                totalseason += 1
+        if False:  # not_blank(srch_destination_id, hotel_country):
+            totalseason += apply_rules(
+                          ss, filled, rule_collections['best_hotels_season'],
+                          out)
 
         s3 = (hotel_market)
-        if s3 in rule_collections['best_hotels_country']:
-            d = rule_collections['best_hotels_country'][s3]
-            topitems = nlargest(5, d.items(), key=itemgetter(1))
-            for i in range(len(topitems)):
-                if topitems[i][0] in filled:
-                    continue
-                if len(filled) == 5:
-                    break
-                out.write(' ' + topitems[i][0])
-                filled.append(topitems[i][0])
-                total3 += 1
+        total3 += apply_rules(
+            s3, filled, rule_collections['best_hotels_country'], out)
+
 
         for i in range(len(topclasters)):
             if topclasters[i][0] in filled:
