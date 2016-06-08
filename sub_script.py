@@ -41,8 +41,10 @@ def append_rule(antecedents, consequent, weight, rule_collection):
             rule_collection[antecedents][consequent] += weight
         else:
             rule_collection[antecedents][consequent] = weight
+        rule_collection[antecedents]['__all__'] += weight
     else:
-        rule_collection[antecedents] = dict()
+        # rule_collection[antecedents] = dict()
+        rule_collection[antecedents] = {'__all__': weight}
         rule_collection[antecedents][consequent] = weight
 
 
@@ -55,15 +57,29 @@ def apply_rules(antecedents, consequents, rule_collection, out):
     new_consequents = 0
     if antecedents in rule_collection:
         rule = rule_collection[antecedents]
-        topitems = nlargest(5, sorted(rule.items()), key=itemgetter(1))
-        for i in range(len(topitems)):
-            if topitems[i][0] in consequents:
-                continue
-            if len(consequents) == 5:
-                break
-            out.write(' ' + topitems[i][0])
-            consequents.append(topitems[i][0])
-            new_consequents += 1
+        # print(rule)
+        support_antecedents = float(rule['__all__']) + 1e-9
+        # print(support_antecedents)
+        rule_items = [(cluster, support / support_antecedents) for cluster, support in rule.items() if cluster != '__all__']
+        topitems = nlargest(5, rule_items, key=itemgetter(1))
+        # if cluster already in consequents, add only if higher confidence
+        for topitem in topitems:
+            cluster_id, new_confidence = topitem
+            if cluster_id in consequents.keys():
+                if consequents[cluster_id] < new_confidence:
+                    consequents[cluster_id] = new_confidence
+                    new_consequents += 1
+            else:  # otherwise just add it to the list
+                consequents[cluster_id] = new_confidence
+                new_consequents += 1
+        # for i in range(len(topitems)):
+        #     if topitems[i][0] in consequents:
+        #         continue
+        #     if len(consequents) == 5:
+        #         break
+        #     out.write(' ' + topitems[i][0])
+        #     consequents.append(topitems[i][0])
+        #     new_consequents += 1
     return new_consequents
 
 
@@ -207,7 +223,6 @@ def prepare_arrays_match():
             best_hotels_country = rule_collections['best_hotels_country']
             append_rule(s3, hotel_cluster, append_2, best_hotels_country)
 
-
         if hotel_cluster in popular_hotel_cluster:
             popular_hotel_cluster[hotel_cluster] += append_0
         else:
@@ -220,6 +235,7 @@ def prepare_arrays_match():
 def gen_submission(rule_collections, popular_hotel_cluster):
     # now = datetime.datetime.now()
     # path = 'submission_' + str(now.strftime("%Y-%m-%d-%H-%M")) + '.csv'
+    # path = 'submission_last.csv'
     path = 'submission_last.csv'
     out = open(path, "w")
     f = open("t2.csv", "r")
@@ -267,7 +283,7 @@ def gen_submission(rule_collections, popular_hotel_cluster):
         hotel_market = arr[21]
 
         out.write(str(id) + ',')
-        filled = []
+        filled = {}
 
         # feat eng
         try:
@@ -331,16 +347,17 @@ def gen_submission(rule_collections, popular_hotel_cluster):
         total3 += apply_rules(
             s3, filled, rule_collections['best_hotels_country'], out)
 
+        clusters_conf = filled.items()
+        # print(clusters_conf)
+        clusters_conf = sorted(clusters_conf, key=lambda x: -x[1])[:5]
+        for cluster_conf in clusters_conf:
+            out.write(' ' + cluster_conf[0])
 
-        for i in range(len(topclasters)):
-            if topclasters[i][0] in filled:
-                continue
-            if len(filled) == 5:
-                break
-            out.write(' ' + topclasters[i][0])
-            filled.append(topclasters[i][0])
-            total4 += 1
-
+        if len(clusters_conf) < 5:
+            my_topclasters = topclasters[:5 - len(clusters_conf)]
+            total4 += len(my_topclasters)
+            for topclaster in my_topclasters:
+                out.write(' ' + topclaster[0])
         out.write("\n")
     out.close()
     print('Total 1: {} ...'.format(total1))
