@@ -10,4 +10,4 @@ clusters_pred = predictions['hotel_cluster'].str.strip().str.split(' ')
 # need to cast to str bc predictions are str as well
 clusters_real = [[str(l)] for l in real["hotel_cluster"]]
 
-print(ml_metrics.mapk(clusters_pred, clusters_real, k=5))
+print(ml_metrics.mapk(clusters_real, clusters_pred, k=5))
